@@ -156,6 +156,12 @@ public class TerminalScreen extends Screen {
 		for (TerminalSession.Entry entry : session.snapshot()) {
 			String text = entry.text().toString();
 			if (text.isEmpty() && entry.color() != TerminalSession.ASSISTANT) continue;
+			if (text.isEmpty()) {
+				// The reply that is still on its way.
+				lines.add(Component.literal("thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4))).getVisualOrderText());
+				colors.add(TerminalSession.SYSTEM);
+				continue;
+			}
 			for (String paragraph : text.split("\n", -1)) {
 				List<FormattedCharSequence> wrapped = font.split(Component.literal(paragraph), wrapWidth);
 				if (wrapped.isEmpty()) wrapped = List.of(FormattedCharSequence.EMPTY);

@@ -89,13 +89,16 @@ public final class TerminalSession {
 		if (provider != null) provider.cancel();
 	}
 
-	private synchronized void add(String text, int color) {
-		entries.add(new Entry(new StringBuilder(text), color));
+	private synchronized Entry add(String text, int color) {
+		Entry entry = new Entry(new StringBuilder(text), color);
+		entries.add(entry);
 		if (entries.size() > 500) entries.removeFirst();
+		return entry;
 	}
 
-	private synchronized void appendToLast(String text) {
-		entries.getLast().text().append(text);
+	/** Appends to a specific entry; other lines (errors, notices) may have been added after it. */
+	private synchronized void append(Entry entry, String text) {
+		entry.text().append(text);
 	}
 
 	private void printHelp() {
@@ -166,15 +169,18 @@ public final class TerminalSession {
 			}
 		}
 		add("> " + input, USER);
-		add("", ASSISTANT);
+		Entry reply = add("", ASSISTANT);
 		provider.send(prompt, new ChatProvider.Listener() {
 			@Override
 			public void onText(String chunk) {
-				appendToLast(chunk);
+				append(reply, chunk);
 			}
 
 			@Override
 			public void onDone(String error) {
+				synchronized (TerminalSession.this) {
+					if (reply.text().isEmpty()) entries.remove(reply);
+				}
 				if (error != null) add(error, ERROR);
 			}
 		});

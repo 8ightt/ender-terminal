@@ -90,6 +90,7 @@ abstract class HttpChatProvider implements ChatProvider {
 			if (res.statusCode() / 100 != 2) {
 				String text = res.body().collect(Collectors.joining("\n"));
 				error = "HTTP " + res.statusCode() + ": " + describeError(text);
+				if (res.statusCode() == 404) error += " Check the model name in /settings.";
 			} else {
 				Iterator<String> it = res.body().iterator();
 				while (it.hasNext() && !cancelled) {

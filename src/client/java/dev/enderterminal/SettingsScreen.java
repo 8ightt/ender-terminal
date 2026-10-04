@@ -1,6 +1,7 @@
 package dev.enderterminal;
 
 import dev.enderterminal.EnderTerminalConfig.Provider;
+import dev.enderterminal.provider.OpenAiCompatibleProvider;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -33,6 +34,8 @@ public class SettingsScreen extends Screen {
 	private final List<Label> labels = new ArrayList<>();
 	private int scroll;
 	private int maxScroll;
+	/** Result of asking a local server which models it has, shown under the Model field. */
+	private volatile String detectedModels = "";
 
 	public SettingsScreen(@Nullable Screen parent) {
 		super(Component.literal("Ender Terminal Settings"));
@@ -79,19 +82,25 @@ public class SettingsScreen extends Screen {
 					add(Button.builder(Component.literal(p[0]), b -> {
 						edit.openaiBaseUrl = p[1];
 						edit.openaiModel = p[2];
+						detectedModels = "";
 						rebuildWidgets();
+						if (p[1].startsWith("http://localhost")) detectModels(p[0]);
 					}).bounds(x + i * (bw + 4), y, bw, 20).build());
 				}
 				y += 26;
 				y = field(x, y, "Base URL", edit.openaiBaseUrl, false, v -> edit.openaiBaseUrl = v);
 				y = field(x, y, "API key (leave empty for Ollama / LM Studio)", edit.openaiApiKey, true, v -> edit.openaiApiKey = v);
 				y = field(x, y, "Model", edit.openaiModel, false, v -> edit.openaiModel = v);
+				if (!detectedModels.isEmpty()) {
+					label(x, y - 5, detectedModels, HINT);
+					y += 8;
+				}
 			}
 		}
 
 		add(CycleButton.onOffBuilder(edit.shareGameInfo)
 				.create(x, y, FIELD_W, 20, Component.literal("Share game info with AI"), (b, v) -> edit.shareGameInfo = v));
-		label(x, y + 22, "Position, inventory, what you look at, nearby mobs and mod list. See it with /context.", HINT);
+		label(x, y + 22, "Position, inventory, view, nearby mobs, mods. See /context.", HINT);
 		y += 36;
 
 		y = field(x, y, "System prompt (personality and rules)", edit.systemPrompt, false, v -> edit.systemPrompt = v);
@@ -151,6 +160,27 @@ public class SettingsScreen extends Screen {
 		return y + ROW;
 	}
 
+	/** Asks the local server for its models and fills in the first one. */
+	private void detectModels(String serverName) {
+		String url = edit.openaiBaseUrl;
+		detectedModels = "Looking for installed models...";
+		Thread t = new Thread(() -> {
+			List<String> models = OpenAiCompatibleProvider.listModels(url, edit.openaiApiKey);
+			minecraft.execute(() -> {
+				if (!url.equals(edit.openaiBaseUrl)) return;
+				if (models.isEmpty()) {
+					detectedModels = serverName + " not reachable or has no models. Is it running?";
+				} else {
+					edit.openaiModel = models.getFirst();
+					detectedModels = "Installed: " + String.join(", ", models);
+				}
+				rebuildWidgets();
+			});
+		}, "Ender Terminal models");
+		t.setDaemon(true);
+		t.start();
+	}
+
 	private void save() {
 		edit.save();
 		session.applyConfig(edit);
@@ -169,7 +199,7 @@ public class SettingsScreen extends Screen {
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-		graphics.fill(0, 0, width, height, 0xE0101010);
+		graphics.fill(0, 0, width, height, 0xF20B0B10);
 	}
 
 	@Override

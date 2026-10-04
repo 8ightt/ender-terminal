@@ -1,9 +1,16 @@
 package dev.enderterminal.provider;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
+import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 /** Any /chat/completions endpoint: OpenAI, OpenRouter, Groq, Ollama, LM Studio, vLLM, ... */
@@ -22,6 +29,26 @@ public final class OpenAiCompatibleProvider extends HttpChatProvider {
 	@Override
 	public String name() {
 		return model + " @ " + baseUrl.replaceFirst("^https?://", "");
+	}
+
+	/**
+	 * Lists model ids from {@code GET /models}, which OpenAI, Ollama and LM Studio all support.
+	 * Blocks for up to a few seconds; call off the render thread. Returns an empty list on any failure.
+	 */
+	public static List<String> listModels(String baseUrl, String apiKey) {
+		try (HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()) {
+			HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(trimSlash(baseUrl) + "/models")).timeout(Duration.ofSeconds(5)).GET();
+			if (!apiKey.isBlank()) req.header("Authorization", "Bearer " + apiKey.strip());
+			HttpResponse<String> res = http.send(req.build(), HttpResponse.BodyHandlers.ofString());
+			if (res.statusCode() / 100 != 2) return List.of();
+			List<String> ids = new ArrayList<>();
+			for (JsonElement el : JsonParser.parseString(res.body()).getAsJsonObject().getAsJsonArray("data")) {
+				ids.add(el.getAsJsonObject().get("id").getAsString());
+			}
+			return ids;
+		} catch (Exception e) {
+			return List.of();
+		}
 	}
 
 	@Override
