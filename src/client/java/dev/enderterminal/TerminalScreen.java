@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -28,6 +29,13 @@ public class TerminalScreen extends Screen {
 	private int scroll; // lines scrolled up from the bottom
 	private int historyIndex = -1;
 	private String draft = "";
+	// Layout of the last frame, so a click can be matched to the message under the mouse.
+	private final List<Integer> lineEntry = new ArrayList<>();
+	private final List<String> entryText = new ArrayList<>();
+	private int firstLine;
+	private int lastLine;
+	private int firstLineY;
+	private long copiedUntil;
 
 	public TerminalScreen(@Nullable Screen parent) {
 		super(Component.translatable("enderterminal.title"));
@@ -48,6 +56,11 @@ public class TerminalScreen extends Screen {
 
 	@Override
 	public void tick() {
+		String copy = session.copyRequested;
+		if (copy != null) {
+			session.copyRequested = null;
+			copy(copy);
+		}
 		if (session.openSettingsRequested) {
 			session.openSettingsRequested = false;
 			minecraft.gui.setScreen(new SettingsScreen(this));
@@ -116,6 +129,32 @@ public class TerminalScreen extends Screen {
 		return true;
 	}
 
+	private void copy(String text) {
+		minecraft.keyboardHandler.setClipboard(text);
+		copiedUntil = System.currentTimeMillis() + 1500;
+	}
+
+	/** Index of the message under the mouse, or -1. */
+	private int entryAt(double mouseX, double mouseY) {
+		if (mouseX < PAD || mouseX > width - PAD || mouseY < outputTop() || mouseY >= outputBottom()) return -1;
+		int line = firstLine + (int) Math.floor((mouseY - firstLineY) / font.lineHeight);
+		if (line < firstLine || line >= lastLine || line >= lineEntry.size()) return -1;
+		int entry = lineEntry.get(line);
+		return entryText.get(entry) == null ? -1 : entry;
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+			int entry = entryAt(event.x(), event.y());
+			if (entry >= 0) {
+				copy(entryText.get(entry));
+				return true;
+			}
+		}
+		return super.mouseClicked(event, doubleClick);
+	}
+
 	private int outputTop() {
 		return TOP + font.lineHeight + 8;
 	}
@@ -136,7 +175,8 @@ public class TerminalScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-		String status = session.isBusy() ? "thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4)) + "  (Ctrl+C to stop)" : "ready";
+		String status = System.currentTimeMillis() < copiedUntil ? "copied to clipboard"
+				: session.isBusy() ? "thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4)) + "  (Ctrl+C to stop)" : "ready";
 		int hx = PAD;
 		graphics.text(font, "Ender Terminal", hx, TOP, 0xFFC77DFF);
 		hx += font.width("Ender Terminal");
@@ -152,22 +192,29 @@ public class TerminalScreen extends Screen {
 
 		List<FormattedCharSequence> lines = new ArrayList<>();
 		List<Integer> colors = new ArrayList<>();
+		lineEntry.clear();
+		entryText.clear();
 		int wrapWidth = width - PAD * 2;
 		for (TerminalSession.Entry entry : session.snapshot()) {
 			String text = entry.text().toString();
 			if (text.isEmpty() && entry.color() != TerminalSession.ASSISTANT) continue;
+			int index = entryText.size();
 			if (text.isEmpty()) {
 				// The reply that is still on its way.
+				entryText.add(null);
 				lines.add(Component.literal("thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4))).getVisualOrderText());
 				colors.add(TerminalSession.SYSTEM);
+				lineEntry.add(index);
 				continue;
 			}
+			entryText.add(entry.color() == TerminalSession.USER && text.startsWith("> ") ? text.substring(2) : text);
 			for (String paragraph : text.split("\n", -1)) {
 				List<FormattedCharSequence> wrapped = font.split(Component.literal(paragraph), wrapWidth);
 				if (wrapped.isEmpty()) wrapped = List.of(FormattedCharSequence.EMPTY);
 				for (FormattedCharSequence line : wrapped) {
 					lines.add(line);
 					colors.add(entry.color());
+					lineEntry.add(index);
 				}
 			}
 		}
@@ -177,8 +224,13 @@ public class TerminalScreen extends Screen {
 		int end = lines.size() - scroll;
 		int start = Math.max(0, end - visible);
 		int y = outputBottom() - (end - start) * font.lineHeight;
+		firstLine = start;
+		lastLine = end;
+		firstLineY = y;
+		int hovered = entryAt(mouseX, mouseY);
 		graphics.enableScissor(PAD, outputTop(), width - PAD, outputBottom());
 		for (int i = start; i < end; i++) {
+			if (lineEntry.get(i) == hovered) graphics.fill(PAD - 2, y - 1, width - PAD + 2, y + font.lineHeight - 1, 0x30C77DFF);
 			graphics.text(font, lines.get(i), PAD, y, colors.get(i), false);
 			y += font.lineHeight;
 		}

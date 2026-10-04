@@ -8,7 +8,7 @@ The terminal knows where you are, what you're holding, what you're looking at an
 
 ## Features
 
-- **Terminal screen** with streaming replies, scrollback, input history and a conversation that survives closing the screen.
+- **Terminal screen** with streaming replies, scrollback, input history, click-to-copy, and a conversation that is remembered between game sessions.
 - **Bring your own AI**
   - **Anthropic API key**: pay-per-use key from [console.anthropic.com](https://console.anthropic.com).
   - **OpenAI-compatible**: OpenAI, OpenRouter, Groq, or free local models through [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai). Presets included.
@@ -27,6 +27,7 @@ The terminal knows where you are, what you're holding, what you're looking at an
 - **What is not sent:** no telemetry, no analytics, nothing to the mod author. The mod has no servers or accounts of its own.
 - **Local models** through Ollama or LM Studio keep everything on your own computer.
 - Your API key is stored only in `config/enderterminal.json` on your computer.
+- Your conversation is saved only on your computer, in `enderterminal/conversation.json`, so it continues after a restart. `/new` clears it.
 
 ## Requirements
 
@@ -49,7 +50,9 @@ The terminal knows where you are, what you're holding, what you're looking at an
 | <kbd>↑</kbd> / <kbd>↓</kbd> | Previous / next message you typed |
 | Mouse wheel, <kbd>PgUp</kbd> / <kbd>PgDn</kbd> | Scroll the conversation |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> or `/cancel` | Stop the current reply |
-| `/new` | Start a fresh conversation |
+| `/new` | Start a fresh conversation (also clears the saved one) |
+| `/copy` | Copy the last reply |
+| Click a message | Copy that message |
 | `/context` | Show the game info that gets sent |
 | `/settings` | Open settings |
 | `/clear` | Clear the screen |

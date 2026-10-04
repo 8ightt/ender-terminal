@@ -55,6 +55,23 @@ abstract class HttpChatProvider implements ChatProvider {
 	}
 
 	@Override
+	public synchronized JsonObject saveState() {
+		JsonObject state = new JsonObject();
+		state.add("messages", toJson(history));
+		return state;
+	}
+
+	@Override
+	public synchronized void loadState(JsonObject state) {
+		history.clear();
+		if (!state.has("messages")) return;
+		for (JsonElement el : state.getAsJsonArray("messages")) {
+			JsonObject m = el.getAsJsonObject();
+			history.add(new Message(m.get("role").getAsString(), m.get("content").getAsString()));
+		}
+	}
+
+	@Override
 	public void cancel() {
 		cancelled = true;
 		Stream<String> s = body;

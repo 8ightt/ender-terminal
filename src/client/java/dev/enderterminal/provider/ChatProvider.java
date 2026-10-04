@@ -1,5 +1,7 @@
 package dev.enderterminal.provider;
 
+import com.google.gson.JsonObject;
+
 public interface ChatProvider {
 	interface Listener {
 		void onText(String chunk);
@@ -28,5 +30,14 @@ public interface ChatProvider {
 
 	/** Re-reads {@link #accountInfo()} in the background where that needs a lookup. */
 	default void refreshAccount() {
+	}
+
+	/** What the provider remembers of the conversation, saved so it can continue after a restart. Null if nothing. */
+	default JsonObject saveState() {
+		return null;
+	}
+
+	/** Restores what {@link #saveState()} returned in an earlier session. */
+	default void loadState(JsonObject state) {
 	}
 }

@@ -3,8 +3,14 @@ package dev.enderterminal;
 import dev.enderterminal.provider.AnthropicApiProvider;
 import dev.enderterminal.provider.ChatProvider;
 import dev.enderterminal.provider.OpenAiCompatibleProvider;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.jspecify.annotations.Nullable;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,8 +38,77 @@ public final class TerminalSession {
 	public TerminalSession(EnderTerminalConfig config, Path baseDir) {
 		this.baseDir = baseDir;
 		applyConfig(config);
+		boolean restored = load();
 		printHelp();
+		if (restored) add("Restored your last conversation. Type /new to start fresh.", SYSTEM);
 	}
+
+	private Path conversationFile() {
+		return baseDir.resolve("conversation.json");
+	}
+
+	/**
+	 * Saves what you and the AI said, plus what the provider remembers, so the conversation survives a restart.
+	 * Notices and errors are left out; they only matter in the moment.
+	 */
+	public void save() {
+		JsonObject root = new JsonObject();
+		root.addProperty("provider", config.provider.name());
+		JsonArray saved = new JsonArray();
+		synchronized (this) {
+			for (Entry e : entries) {
+				if ((e.color() != USER && e.color() != ASSISTANT) || e.text().isEmpty()) continue;
+				JsonObject o = new JsonObject();
+				o.addProperty("role", e.color() == USER ? "user" : "assistant");
+				o.addProperty("text", e.text().toString());
+				saved.add(o);
+			}
+		}
+		root.add("entries", saved);
+		JsonObject state = provider == null ? null : provider.saveState();
+		if (state != null) root.add("state", state);
+		try {
+			Files.createDirectories(baseDir);
+			Files.writeString(conversationFile(), root.toString(), StandardCharsets.UTF_8);
+		} catch (Exception e) {
+			EnderTerminalClient.LOGGER.warn("Could not save conversation", e);
+		}
+	}
+
+	private boolean load() {
+		Path file = conversationFile();
+		if (!Files.exists(file)) return false;
+		try {
+			JsonObject root = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonObject();
+			// Another provider can't continue this conversation; start fresh rather than mix them.
+			if (!config.provider.name().equals(root.has("provider") ? root.get("provider").getAsString() : "")) return false;
+			JsonArray saved = root.getAsJsonArray("entries");
+			if (saved != null) {
+				for (JsonElement el : saved) {
+					JsonObject o = el.getAsJsonObject();
+					add(o.get("text").getAsString(), "user".equals(o.get("role").getAsString()) ? USER : ASSISTANT);
+				}
+			}
+			// Restored even when the screen was cleared with /clear: the AI still remembers.
+			if (provider != null && root.has("state")) provider.loadState(root.getAsJsonObject("state"));
+			return saved != null && !saved.isEmpty();
+		} catch (Exception e) {
+			EnderTerminalClient.LOGGER.warn("Could not load saved conversation", e);
+			return false;
+		}
+	}
+
+	/** Text of the last reply, or null if there is none yet. */
+	public synchronized @Nullable String lastReply() {
+		for (int i = entries.size() - 1; i >= 0; i--) {
+			Entry e = entries.get(i);
+			if (e.color() == ASSISTANT && !e.text().isEmpty()) return e.text().toString();
+		}
+		return null;
+	}
+
+	/** Set when /copy wants the screen to put text on the clipboard. */
+	public @Nullable String copyRequested;
 
 	public EnderTerminalConfig config() {
 		return config;
@@ -43,14 +118,25 @@ public final class TerminalSession {
 		return baseDir;
 	}
 
-	/** Switches to the provider described by {@code config}. Starts a new conversation. */
+	/**
+	 * Switches to the provider described by {@code config}. The conversation carries over when the provider type
+	 * stays the same (e.g. a new model or toggled setting); a different type starts a new conversation.
+	 */
 	public void applyConfig(EnderTerminalConfig config) {
-		if (provider != null) provider.cancel();
+		ChatProvider old = provider;
+		boolean sameKind = old != null && this.config != null && this.config.provider == config.provider;
+		JsonObject carried = sameKind ? old.saveState() : null;
+		if (old != null) old.cancel();
 		this.config = config;
 		this.provider = createProvider(config, baseDir);
-		this.modsSent = false;
 		if (provider != null) provider.refreshAccount();
-		if (!entries.isEmpty()) add(provider == null ? "No AI provider selected." : "Now using " + provider.name() + ". New conversation.", SYSTEM);
+		if (carried != null) provider.loadState(carried);
+		else this.modsSent = false;
+		if (entries.isEmpty()) return;
+		if (provider == null) add("No AI provider selected.", SYSTEM);
+		else if (sameKind) add("Settings saved. Now using " + provider.name() + ".", SYSTEM);
+		else add("Now using " + provider.name() + ". New conversation.", SYSTEM);
+		save();
 	}
 
 	public static @Nullable ChatProvider createProvider(EnderTerminalConfig c, Path baseDir) {
@@ -107,7 +193,8 @@ public final class TerminalSession {
 		} else {
 			add("Using " + provider.name() + ".", SYSTEM);
 		}
-		add("Commands: /settings, /new (fresh conversation), /context (game info sent), /clear, /cancel, /help", SYSTEM);
+		add("Commands: /settings, /new (fresh conversation), /copy (last reply), /context (game info), /clear, /cancel, /help", SYSTEM);
+		add("Tip: click any message to copy it.", SYSTEM);
 	}
 
 	public void submit(String raw) {
@@ -124,6 +211,7 @@ public final class TerminalSession {
 				synchronized (this) {
 					entries.clear();
 				}
+				save();
 				return;
 			}
 			case "/new" -> {
@@ -132,7 +220,17 @@ public final class TerminalSession {
 				}
 				if (provider != null) provider.reset();
 				modsSent = false;
+				save();
 				add("Started a new conversation.", SYSTEM);
+				return;
+			}
+			case "/copy" -> {
+				String last = lastReply();
+				if (last == null) {
+					add("No reply to copy yet.", SYSTEM);
+				} else {
+					copyRequested = last;
+				}
 				return;
 			}
 			case "/cancel" -> {
@@ -187,6 +285,7 @@ public final class TerminalSession {
 					if (reply.text().isEmpty()) entries.remove(reply);
 				}
 				if (error != null) add(error, ERROR);
+				save();
 			}
 		});
 	}
