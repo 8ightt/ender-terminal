@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "enderterminal",
+	"version": "${version}",
+	"name": "Ender Terminal",
+	"description": "A terminal inside Minecraft for chatting with AI: Claude, OpenAI, OpenRouter, or local models through Ollama and LM Studio.",
+	"authors": ["Ender Terminal contributors"],
+	"license": "MIT",
+	"icon": "assets/enderterminal/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.enderterminal.EnderTerminalClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
