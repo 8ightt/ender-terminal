@@ -8,7 +8,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.SpriteIconButton;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -44,8 +44,13 @@ public class EnderTerminalClient implements ClientModInitializer {
 		// "Ender Terminal" button in the top-left corner of the Escape menu.
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			if (screen instanceof PauseScreen) {
-				Screens.getWidgets(screen).add(Button.builder(Component.translatable("enderterminal.button"),
-						b -> mc.gui.setScreen(new TerminalScreen(screen))).bounds(4, 4, 90, 20).build());
+				SpriteIconButton button = SpriteIconButton.builder(Component.translatable("enderterminal.button"),
+								b -> mc.gui.setScreen(new TerminalScreen(screen)), false)
+						.sprite(Identifier.fromNamespaceAndPath(MOD_ID, "terminal_button"), 16, 16)
+						.width(110)
+						.build();
+				button.setPosition(4, 4);
+				Screens.getWidgets(screen).add(button);
 			}
 		});
 	}
