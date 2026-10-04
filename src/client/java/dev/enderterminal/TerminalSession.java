@@ -141,7 +141,12 @@ public final class TerminalSession {
 			}
 			case "/context" -> {
 				String ctx = GameContext.snapshot(true);
-				add(!config.shareGameInfo ? "Game info sharing is off (see /settings)." : ctx == null ? "Not in a world." : ctx, SYSTEM);
+				if (ctx == null) {
+					add("Not in a world.", SYSTEM);
+				} else {
+					add(config.shareGameInfo ? "Sent with each message:" : "Game info sharing is off. Turn it on in /settings to send this with each message:", SYSTEM);
+					add(ctx, SYSTEM);
+				}
 				return;
 			}
 			case "/help" -> {

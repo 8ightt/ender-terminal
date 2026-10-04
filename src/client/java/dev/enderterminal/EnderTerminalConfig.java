@@ -25,7 +25,7 @@ public final class EnderTerminalConfig {
 	public String openaiModel = "gpt-4o-mini";
 
 	/** Attach a snapshot of position, inventory, surroundings etc. to each message. */
-	public boolean shareGameInfo = true;
+	public boolean shareGameInfo = false;
 
 	public String systemPrompt = "You are chatting through a small text terminal inside Minecraft Java Edition. "
 			+ "Reply in plain text without markdown tables or headings. Keep answers short unless asked for detail.";

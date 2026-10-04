@@ -12,13 +12,21 @@ The terminal knows where you are, what you're holding, what you're looking at an
 - **Bring your own AI**
   - **Anthropic API key**: pay-per-use key from [console.anthropic.com](https://console.anthropic.com).
   - **OpenAI-compatible**: OpenAI, OpenRouter, Groq, or free local models through [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai). Presets included.
-- **Game awareness**: each message can include a snapshot of your position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what is sent, or turn it off in settings.
+- **Game awareness** (opt-in): turn on **Share game info** in settings and each message includes a snapshot of your position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what would be sent.
 - **Client-side only**: works in singleplayer and on servers (the server doesn't need it) and never changes your worlds.
 - **Chat only**: the AI cannot run commands, read files or change anything on your computer.
 
 | | | |
 | --- | --- | --- |
 | ![Knows your game](docs/images/feature-knows-your-game.png) | ![Use your own AI](docs/images/feature-use-your-own-ai.png) | ![Safe](docs/images/feature-safe.png) |
+
+## Privacy
+
+- **Nothing is sent anywhere until you choose a provider** in settings. A fresh install has no provider.
+- **What is sent:** the messages you type, and the game snapshot only if **Share game info** is on (it is off by default). It goes **only to the provider you chose** (Anthropic, OpenAI, OpenRouter, Groq or your own endpoint), under that provider's privacy policy.
+- **What is not sent:** no telemetry, no analytics, nothing to the mod author. The mod has no servers or accounts of its own.
+- **Local models** through Ollama or LM Studio keep everything on your own computer.
+- Your API key is stored only in `config/enderterminal.json` on your computer.
 
 ## Requirements
 
@@ -58,7 +66,7 @@ Settings are saved in `config/enderterminal.json`. Everything can be changed in-
 | `provider` | `NONE`, `ANTHROPIC_API` or `OPENAI_COMPATIBLE` |
 | `anthropicApiKey`, `anthropicModel` | Anthropic API settings |
 | `openaiBaseUrl`, `openaiApiKey`, `openaiModel` | OpenAI-compatible endpoint settings |
-| `shareGameInfo` | Attach the game snapshot to messages |
+| `shareGameInfo` | Attach the game snapshot to messages (default `false`) |
 | `systemPrompt` | Personality and rules for the AI |
 
 API keys are stored in plain text in this file. Don't share it.
