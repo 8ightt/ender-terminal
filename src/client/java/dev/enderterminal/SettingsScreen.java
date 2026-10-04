@@ -1,0 +1,150 @@
+package dev.enderterminal;
+
+import dev.enderterminal.EnderTerminalConfig.Provider;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
+import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+public class SettingsScreen extends Screen {
+	private record Label(int x, int y, String text, int color) {
+	}
+
+	private static final int FIELD_W = 320;
+	private static final int ROW = 36;
+	private static final int LABEL = 0xFFA0A0A0;
+	private static final int HINT = 0xFF707070;
+
+	private final @Nullable Screen parent;
+	private final TerminalSession session = EnderTerminalClient.session();
+	private final EnderTerminalConfig edit = session.config().copy();
+	private final List<Label> labels = new ArrayList<>();
+
+	public SettingsScreen(@Nullable Screen parent) {
+		super(Component.literal("Ender Terminal Settings"));
+		this.parent = parent;
+	}
+
+	@Override
+	protected void init() {
+		labels.clear();
+		int x = (width - FIELD_W) / 2;
+		int y = 28;
+
+		addRenderableWidget(CycleButton.<Provider>builder(SettingsScreen::providerLabel, edit.provider)
+				.withValues(Provider.values())
+				.create(x, y, FIELD_W, 20, Component.literal("Provider"), (b, v) -> {
+					edit.provider = v;
+					rebuildWidgets();
+				}));
+		y += 28;
+
+		switch (edit.provider) {
+			case NONE -> {
+				label(x, y, "Pick a provider above:", LABEL);
+				label(x, y + 12, "Anthropic API - pay-per-use API key from console.anthropic.com.", HINT);
+				label(x, y + 24, "OpenAI-compatible - OpenAI, OpenRouter, Groq, or a local Ollama / LM Studio.", HINT);
+				y += 40;
+			}
+			case ANTHROPIC_API -> {
+				y = field(x, y, "API key (console.anthropic.com > API keys)", edit.anthropicApiKey, true, v -> edit.anthropicApiKey = v);
+				y = field(x, y, "Model", edit.anthropicModel, false, v -> edit.anthropicModel = v);
+			}
+			case OPENAI_COMPATIBLE -> {
+				label(x, y, "Presets", LABEL);
+				y += 12;
+				String[][] presets = {
+						{"OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"},
+						{"OpenRouter", "https://openrouter.ai/api/v1", "openai/gpt-4o-mini"},
+						{"Ollama", "http://localhost:11434/v1", "llama3.2"},
+						{"LM Studio", "http://localhost:1234/v1", "local-model"},
+				};
+				int bw = (FIELD_W - 12) / 4;
+				for (int i = 0; i < presets.length; i++) {
+					String[] p = presets[i];
+					addRenderableWidget(Button.builder(Component.literal(p[0]), b -> {
+						edit.openaiBaseUrl = p[1];
+						edit.openaiModel = p[2];
+						rebuildWidgets();
+					}).bounds(x + i * (bw + 4), y, bw, 20).build());
+				}
+				y += 26;
+				y = field(x, y, "Base URL", edit.openaiBaseUrl, false, v -> edit.openaiBaseUrl = v);
+				y = field(x, y, "API key (leave empty for Ollama / LM Studio)", edit.openaiApiKey, true, v -> edit.openaiApiKey = v);
+				y = field(x, y, "Model", edit.openaiModel, false, v -> edit.openaiModel = v);
+			}
+		}
+
+		addRenderableWidget(CycleButton.onOffBuilder(edit.shareGameInfo)
+				.create(x, y, FIELD_W, 20, Component.literal("Share game info with AI"), (b, v) -> edit.shareGameInfo = v));
+		label(x, y + 22, "Position, inventory, what you look at, nearby mobs and mod list. See it with /context.", HINT);
+		y += 36;
+
+		y = field(x, y, "System prompt (personality and rules)", edit.systemPrompt, false, v -> edit.systemPrompt = v);
+
+		int bw = (FIELD_W - 4) / 2;
+		int by = Math.max(y + 4, height - 28);
+		addRenderableWidget(Button.builder(Component.literal("Save"), b -> save()).bounds(x, by, bw, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + bw + 4, by, bw, 20).build());
+	}
+
+	private static Component providerLabel(Provider p) {
+		return Component.literal(switch (p) {
+			case NONE -> "None";
+			case ANTHROPIC_API -> "Anthropic API key";
+			case OPENAI_COMPATIBLE -> "OpenAI-compatible";
+		});
+	}
+
+	private void label(int x, int y, String text, int color) {
+		labels.add(new Label(x, y, text, color));
+	}
+
+	private int field(int x, int y, String name, String value, boolean secret, Consumer<String> onChange) {
+		label(x, y, name, LABEL);
+		EditBox box = new EditBox(font, x, y + 11, FIELD_W, 18, Component.literal(name));
+		box.setMaxLength(4000);
+		box.setValue(value);
+		box.setResponder(onChange);
+		if (secret) box.addFormatter((text, offset) -> FormattedCharSequence.forward("*".repeat(text.length()), Style.EMPTY));
+		addRenderableWidget(box);
+		return y + ROW;
+	}
+
+	private void save() {
+		edit.save();
+		session.applyConfig(edit);
+		onClose();
+	}
+
+	@Override
+	public void onClose() {
+		minecraft.gui.setScreen(parent);
+	}
+
+	@Override
+	public boolean isPauseScreen() {
+		return false;
+	}
+
+	@Override
+	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+		graphics.fill(0, 0, width, height, 0xE0101010);
+	}
+
+	@Override
+	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+		graphics.centeredText(font, title, width / 2, 10, 0xFFC77DFF);
+		for (Label l : labels) graphics.text(font, l.text(), l.x(), l.y(), l.color(), false);
+		super.extractRenderState(graphics, mouseX, mouseY, a);
+	}
+}
