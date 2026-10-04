@@ -73,4 +73,4 @@ The mod jar is written to `build/libs/`. Run `./gradlew runClient` to start a de
 
 ## License
 
-[MIT](LICENSE)
+[GNU LGPL-3.0](LICENSE). Modpacks and addon mods can use Ender Terminal under any license; modified versions of Ender Terminal itself must be shared under the LGPL-3.0 as well. The LGPL builds on the [GNU GPL-3.0](COPYING), included alongside it.
