@@ -28,6 +28,7 @@ abstract class HttpChatProvider implements ChatProvider {
 	private volatile Thread worker;
 	private volatile Stream<String> body;
 	private volatile boolean cancelled;
+	private volatile int historyLimit;
 
 	protected HttpChatProvider(String systemPrompt) {
 		this.systemPrompt = systemPrompt;
@@ -52,6 +53,24 @@ abstract class HttpChatProvider implements ChatProvider {
 	@Override
 	public synchronized void reset() {
 		history.clear();
+	}
+
+	@Override
+	public void setHistoryLimit(int maxMessages) {
+		historyLimit = maxMessages;
+	}
+
+	/**
+	 * The most recent {@code limit} messages ({@code 0} = all). The full history is kept; only what gets sent is cut,
+	 * since every message re-sends the conversation and long ones get expensive. Starts on a user message, which the
+	 * Anthropic API requires.
+	 */
+	static List<Message> window(List<Message> history, int limit) {
+		if (limit <= 0 || history.size() <= limit) return List.copyOf(history);
+		List<Message> recent = history.subList(history.size() - limit, history.size());
+		int start = 0;
+		while (start < recent.size() - 1 && !"user".equals(recent.get(start).role())) start++;
+		return List.copyOf(recent.subList(start, recent.size()));
 	}
 
 	@Override
@@ -97,7 +116,7 @@ abstract class HttpChatProvider implements ChatProvider {
 		List<Message> messages;
 		synchronized (this) {
 			history.add(new Message("user", prompt));
-			messages = List.copyOf(history);
+			messages = window(history, historyLimit);
 		}
 		StringBuilder reply = new StringBuilder();
 		String error = null;

@@ -103,6 +103,12 @@ public class SettingsScreen extends Screen {
 		label(x, y + 22, "Position, inventory, view, nearby mobs, mods. See /context.", HINT);
 		y += 36;
 
+		add(CycleButton.onOffBuilder(edit.limitHistory)
+				.create(x, y, FIELD_W, 20, Component.literal("Remember only last " + EnderTerminalConfig.HISTORY_LIMIT + " messages"),
+						(b, v) -> edit.limitHistory = v));
+		label(x, y + 22, "Keeps API costs down. Older messages stay on screen.", HINT);
+		y += 36;
+
 		y = field(x, y, "System prompt (personality and rules)", edit.systemPrompt, false, v -> edit.systemPrompt = v);
 
 		maxScroll = Math.max(0, y + scroll - contentBottom());

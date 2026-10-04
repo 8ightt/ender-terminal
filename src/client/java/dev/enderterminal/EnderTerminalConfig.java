@@ -27,6 +27,10 @@ public final class EnderTerminalConfig {
 	/** Attach a snapshot of position, inventory, surroundings etc. to each message. */
 	public boolean shareGameInfo = false;
 
+	/** Send only the last {@link #HISTORY_LIMIT} messages with each request, to keep API costs down. */
+	public boolean limitHistory = true;
+	public static final int HISTORY_LIMIT = 30;
+
 	public String systemPrompt = "You are chatting through a small text terminal inside Minecraft Java Edition. "
 			+ "Reply in plain text without markdown tables or headings. Keep answers short unless asked for detail.";
 

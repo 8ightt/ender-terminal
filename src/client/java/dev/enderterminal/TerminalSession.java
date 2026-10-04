@@ -129,7 +129,10 @@ public final class TerminalSession {
 		if (old != null) old.cancel();
 		this.config = config;
 		this.provider = createProvider(config, baseDir);
-		if (provider != null) provider.refreshAccount();
+		if (provider != null) {
+			provider.refreshAccount();
+			provider.setHistoryLimit(config.limitHistory ? EnderTerminalConfig.HISTORY_LIMIT : 0);
+		}
 		if (carried != null) provider.loadState(carried);
 		else this.modsSent = false;
 		if (entries.isEmpty()) return;

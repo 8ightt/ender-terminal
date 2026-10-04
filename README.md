@@ -70,6 +70,7 @@ Settings are saved in `config/enderterminal.json`. Everything can be changed in-
 | `anthropicApiKey`, `anthropicModel` | Anthropic API settings |
 | `openaiBaseUrl`, `openaiApiKey`, `openaiModel` | OpenAI-compatible endpoint settings |
 | `shareGameInfo` | Attach the game snapshot to messages (default `false`) |
+| `limitHistory` | Send only the last 30 messages with each request, to keep API costs down (default `true`) |
 | `systemPrompt` | Personality and rules for the AI |
 
 API keys are stored in plain text in this file. Don't share it.

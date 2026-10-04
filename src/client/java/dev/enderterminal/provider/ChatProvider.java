@@ -32,6 +32,10 @@ public interface ChatProvider {
 	default void refreshAccount() {
 	}
 
+	/** Sends only the most recent {@code maxMessages} messages with each request ({@code 0} = all). */
+	default void setHistoryLimit(int maxMessages) {
+	}
+
 	/** What the provider remembers of the conversation, saved so it can continue after a restart. Null if nothing. */
 	default JsonObject saveState() {
 		return null;

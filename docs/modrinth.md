@@ -52,6 +52,7 @@ The open key can be changed in **Options → Controls → Key Binds → Ender Te
 
 ## Notes
 - API keys are stored in plain text in `config/enderterminal.json`. Don't share that file.
+- To keep API costs down, only the last 30 messages are sent with each request by default. Turn off "Remember only last 30 messages" in settings to send the whole conversation.
 - Local models run much faster on a dedicated GPU. On CPU only, use a small model (3B) and consider turning off game info.
 
 Source code and issues on [GitHub](https://github.com/8ightt/ender-terminal). Licensed under LGPL-3.0.
