@@ -77,12 +77,23 @@ API keys are stored in plain text in this file. Don't share it.
 
 ## Building from source
 
+Requires **Java 25** (JDK). Gradle downloads everything else on the first build.
+
 ```sh
+# macOS / Linux
 ./gradlew build
+
+# Windows
+gradlew.bat build
 ```
 
-The mod jar is written to `build/libs/`. Run `./gradlew runClient` to start a development client with the mod loaded.
+- The mod jar is written to `build/libs/`.
+- Run `gradlew runClient` (or `./gradlew runClient`) to start a development client with the mod loaded.
 
 ## License
 
-[GNU LGPL-3.0](LICENSE). Modpacks and addon mods can use Ender Terminal under any license; modified versions of Ender Terminal itself must be shared under the LGPL-3.0 as well. The LGPL builds on the [GNU GPL-3.0](COPYING), included alongside it.
+Ender Terminal is licensed under the [GNU LGPL-3.0](LICENSE).
+
+- **Modpacks and addon mods** can use Ender Terminal under any license.
+- **Modified versions** of Ender Terminal itself must be shared under the LGPL-3.0 as well.
+- The LGPL builds on the [GNU GPL-3.0](COPYING), which is included alongside it.
