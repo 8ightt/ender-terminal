@@ -2,6 +2,7 @@ package dev.enderterminal;
 
 import dev.enderterminal.EnderTerminalConfig.Provider;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -23,11 +24,15 @@ public class SettingsScreen extends Screen {
 	private static final int ROW = 36;
 	private static final int LABEL = 0xFFA0A0A0;
 	private static final int HINT = 0xFF707070;
+	/** Settings scroll between the title and the Save/Cancel row, which stays pinned to the bottom. */
+	private static final int CONTENT_TOP = 24;
 
 	private final @Nullable Screen parent;
 	private final TerminalSession session = EnderTerminalClient.session();
 	private final EnderTerminalConfig edit = session.config().copy();
 	private final List<Label> labels = new ArrayList<>();
+	private int scroll;
+	private int maxScroll;
 
 	public SettingsScreen(@Nullable Screen parent) {
 		super(Component.literal("Ender Terminal Settings"));
@@ -38,9 +43,9 @@ public class SettingsScreen extends Screen {
 	protected void init() {
 		labels.clear();
 		int x = (width - FIELD_W) / 2;
-		int y = 28;
+		int y = CONTENT_TOP + 4 - scroll;
 
-		addRenderableWidget(CycleButton.<Provider>builder(SettingsScreen::providerLabel, edit.provider)
+		add(CycleButton.<Provider>builder(SettingsScreen::providerLabel, edit.provider)
 				.withValues(Provider.values())
 				.create(x, y, FIELD_W, 20, Component.literal("Provider"), (b, v) -> {
 					edit.provider = v;
@@ -71,7 +76,7 @@ public class SettingsScreen extends Screen {
 				int bw = (FIELD_W - 12) / 4;
 				for (int i = 0; i < presets.length; i++) {
 					String[] p = presets[i];
-					addRenderableWidget(Button.builder(Component.literal(p[0]), b -> {
+					add(Button.builder(Component.literal(p[0]), b -> {
 						edit.openaiBaseUrl = p[1];
 						edit.openaiModel = p[2];
 						rebuildWidgets();
@@ -84,15 +89,22 @@ public class SettingsScreen extends Screen {
 			}
 		}
 
-		addRenderableWidget(CycleButton.onOffBuilder(edit.shareGameInfo)
+		add(CycleButton.onOffBuilder(edit.shareGameInfo)
 				.create(x, y, FIELD_W, 20, Component.literal("Share game info with AI"), (b, v) -> edit.shareGameInfo = v));
 		label(x, y + 22, "Position, inventory, what you look at, nearby mobs and mod list. See it with /context.", HINT);
 		y += 36;
 
 		y = field(x, y, "System prompt (personality and rules)", edit.systemPrompt, false, v -> edit.systemPrompt = v);
 
+		maxScroll = Math.max(0, y + scroll - contentBottom());
+		if (scroll > maxScroll) {
+			scroll = maxScroll;
+			rebuildWidgets();
+			return;
+		}
+
 		int bw = (FIELD_W - 4) / 2;
-		int by = Math.max(y + 4, height - 28);
+		int by = height - 26;
 		addRenderableWidget(Button.builder(Component.literal("Save"), b -> save()).bounds(x, by, bw, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + bw + 4, by, bw, 20).build());
 	}
@@ -105,8 +117,27 @@ public class SettingsScreen extends Screen {
 		});
 	}
 
+	private int contentBottom() {
+		return height - 32;
+	}
+
+	/** Adds a widget only if it lies fully inside the scrollable area. */
+	private void add(AbstractWidget widget) {
+		if (widget.getY() >= CONTENT_TOP && widget.getY() + widget.getHeight() <= contentBottom()) addRenderableWidget(widget);
+	}
+
 	private void label(int x, int y, String text, int color) {
-		labels.add(new Label(x, y, text, color));
+		if (y >= CONTENT_TOP && y + font.lineHeight <= contentBottom()) labels.add(new Label(x, y, text, color));
+	}
+
+	@Override
+	public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+		int next = Math.clamp(scroll - (int) Math.signum(scrollY) * 24, 0, maxScroll);
+		if (next != scroll) {
+			scroll = next;
+			rebuildWidgets();
+		}
+		return true;
 	}
 
 	private int field(int x, int y, String name, String value, boolean secret, Consumer<String> onChange) {
@@ -116,7 +147,7 @@ public class SettingsScreen extends Screen {
 		box.setValue(value);
 		box.setResponder(onChange);
 		if (secret) box.addFormatter((text, offset) -> FormattedCharSequence.forward("*".repeat(text.length()), Style.EMPTY));
-		addRenderableWidget(box);
+		add(box);
 		return y + ROW;
 	}
 
@@ -145,6 +176,9 @@ public class SettingsScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		graphics.centeredText(font, title, width / 2, 10, 0xFFC77DFF);
 		for (Label l : labels) graphics.text(font, l.text(), l.x(), l.y(), l.color(), false);
+		int arrowX = (width + FIELD_W) / 2 + 6;
+		if (scroll > 0) graphics.text(font, "^", arrowX, CONTENT_TOP + 2, 0xFFC77DFF, false);
+		if (scroll < maxScroll) graphics.text(font, "v more", arrowX, contentBottom() - font.lineHeight, 0xFFC77DFF, false);
 		super.extractRenderState(graphics, mouseX, mouseY, a);
 	}
 }
