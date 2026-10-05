@@ -56,6 +56,16 @@ public final class EnderTerminalConfig {
 		return c;
 	}
 
+	/** Default settings that keep this config's provider and API keys, saved to the same file. */
+	public EnderTerminalConfig defaults() {
+		EnderTerminalConfig d = new EnderTerminalConfig();
+		d.provider = provider;
+		d.anthropicApiKey = anthropicApiKey;
+		d.openaiApiKey = openaiApiKey;
+		d.file = file;
+		return d;
+	}
+
 	public void save() {
 		try {
 			Files.createDirectories(file.getParent());

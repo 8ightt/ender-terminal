@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -41,7 +42,7 @@ public class SettingsScreen extends Screen {
 
 	private final @Nullable Screen parent;
 	private final TerminalSession session = EnderTerminalClient.session();
-	private final EnderTerminalConfig edit = session.config().copy();
+	private EnderTerminalConfig edit = session.config().copy();
 	private final List<Label> labels = new ArrayList<>();
 	private int scroll;
 	private int maxScroll;
@@ -155,10 +156,13 @@ public class SettingsScreen extends Screen {
 			return;
 		}
 
-		int bw = (FIELD_W - 4) / 2;
+		int bw = (FIELD_W - 8) / 3;
 		int by = height - 26;
 		addRenderableWidget(Button.builder(Component.literal("Save"), b -> save()).bounds(x, by, bw, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + bw + 4, by, bw, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Reset"), b -> reset())
+				.tooltip(Tooltip.create(Component.literal("Restore the default settings. Your provider and API keys are kept. Nothing changes until you Save.")))
+				.bounds(x + bw + 4, by, bw, 20).build());
+		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + 2 * (bw + 4), by, bw, 20).build());
 	}
 
 	private static Component providerLabel(Provider p) {
@@ -401,6 +405,13 @@ public class SettingsScreen extends Screen {
 			return true;
 		}
 		return super.mouseClicked(event, doubleClick);
+	}
+
+	private void reset() {
+		edit = edit.defaults();
+		fetchedFor = "";
+		pendingSince = 0;
+		rebuildWidgets();
 	}
 
 	private void save() {
