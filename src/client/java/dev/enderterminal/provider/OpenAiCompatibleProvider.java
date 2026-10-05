@@ -51,6 +51,24 @@ public final class OpenAiCompatibleProvider extends HttpChatProvider {
 		}
 	}
 
+	/** Names the local server when the URL points at its default port, since the usual cause is that it isn't running. */
+	@Override
+	protected String connectError() {
+		String local = localServerName(baseUrl);
+		if (local == null) return super.connectError();
+		return "Could not reach " + local + " at " + baseUrl.replaceFirst("^https?://", "") + ". Is it running? "
+				+ (local.equals("Ollama") ? "Start the Ollama app or run 'ollama serve'." : "Start the server in LM Studio's Developer tab.");
+	}
+
+	/** "Ollama" or "LM Studio" for a localhost URL on their default port, else null. */
+	public static String localServerName(String baseUrl) {
+		String host = baseUrl.strip().replaceFirst("^https?://", "");
+		if (!host.startsWith("localhost") && !host.startsWith("127.0.0.1")) return null;
+		if (host.matches("[^/]*:11434(/.*)?")) return "Ollama";
+		if (host.matches("[^/]*:1234(/.*)?")) return "LM Studio";
+		return null;
+	}
+
 	@Override
 	public String accountInfo() {
 		return apiKey.length() < 8 ? null : "key ..." + apiKey.substring(apiKey.length() - 4);

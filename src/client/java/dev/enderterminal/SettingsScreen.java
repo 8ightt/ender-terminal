@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -27,6 +28,7 @@ public class SettingsScreen extends Screen {
 	private static final int HINT = 0xFF707070;
 	/** Settings scroll between the title and the Save/Cancel row, which stays pinned to the bottom. */
 	private static final int CONTENT_TOP = 24;
+	private static final int PROMPT_H = 64;
 
 	private final @Nullable Screen parent;
 	private final TerminalSession session = EnderTerminalClient.session();
@@ -34,8 +36,11 @@ public class SettingsScreen extends Screen {
 	private final List<Label> labels = new ArrayList<>();
 	private int scroll;
 	private int maxScroll;
-	/** Result of asking a local server which models it has, shown under the Model field. */
+	/** Status of asking the server which models it has, shown under the Model field. */
 	private volatile String detectedModels = "";
+	/** Models the server reported, offered as a picker under the Model field. */
+	private List<String> installedModels = List.of();
+	private @Nullable MultiLineEditBox promptBox;
 
 	public SettingsScreen(@Nullable Screen parent) {
 		super(Component.literal("Ender Terminal Settings"));
@@ -45,6 +50,7 @@ public class SettingsScreen extends Screen {
 	@Override
 	protected void init() {
 		labels.clear();
+		promptBox = null;
 		int x = (width - FIELD_W) / 2;
 		int y = CONTENT_TOP + 4 - scroll;
 
@@ -83,14 +89,29 @@ public class SettingsScreen extends Screen {
 						edit.openaiBaseUrl = p[1];
 						edit.openaiModel = p[2];
 						detectedModels = "";
+						installedModels = List.of();
 						rebuildWidgets();
-						if (p[1].startsWith("http://localhost")) detectModels(p[0]);
+						if (p[1].startsWith("http://localhost")) detectModels();
 					}).bounds(x + i * (bw + 4), y, bw, 20).build());
 				}
 				y += 26;
 				y = field(x, y, "Base URL", edit.openaiBaseUrl, false, v -> edit.openaiBaseUrl = v);
 				y = field(x, y, "API key (leave empty for Ollama / LM Studio)", edit.openaiApiKey, true, v -> edit.openaiApiKey = v);
-				y = field(x, y, "Model", edit.openaiModel, false, v -> edit.openaiModel = v);
+				int findW = 50;
+				field(x, y, "Model", edit.openaiModel, false, FIELD_W - findW - 4, v -> edit.openaiModel = v);
+				add(Button.builder(Component.literal("Find"), b -> detectModels())
+						.bounds(x + FIELD_W - findW, y + 10, findW, 20).build());
+				y += ROW;
+				if (!installedModels.isEmpty()) {
+					String current = installedModels.contains(edit.openaiModel) ? edit.openaiModel : installedModels.getFirst();
+					add(CycleButton.<String>builder(Component::literal, current)
+							.withValues(installedModels)
+							.create(x, y - 4, FIELD_W, 20, Component.literal("Installed"), (b, v) -> {
+								edit.openaiModel = v;
+								rebuildWidgets();
+							}));
+					y += 22;
+				}
 				if (!detectedModels.isEmpty()) {
 					label(x, y - 5, detectedModels, HINT);
 					y += 8;
@@ -106,10 +127,17 @@ public class SettingsScreen extends Screen {
 		add(CycleButton.onOffBuilder(edit.limitHistory)
 				.create(x, y, FIELD_W, 20, Component.literal("Remember only last " + EnderTerminalConfig.HISTORY_LIMIT + " messages"),
 						(b, v) -> edit.limitHistory = v));
-		label(x, y + 22, "Keeps API costs down. Older messages stay on screen.", HINT);
+		boolean local = edit.provider == Provider.OPENAI_COMPATIBLE && OpenAiCompatibleProvider.localServerName(edit.openaiBaseUrl) != null;
+		label(x, y + 22, (local ? "Keeps replies fast on local models." : "Keeps API costs down.") + " Older messages stay on screen.", HINT);
 		y += 36;
 
-		y = field(x, y, "System prompt (personality and rules)", edit.systemPrompt, false, v -> edit.systemPrompt = v);
+		label(x, y, "System prompt (personality and rules)", LABEL);
+		promptBox = MultiLineEditBox.builder().setX(x).setY(y + 11)
+				.build(font, FIELD_W, PROMPT_H, Component.literal("System prompt"));
+		promptBox.setValue(edit.systemPrompt, true);
+		promptBox.setValueListener(v -> edit.systemPrompt = v);
+		add(promptBox);
+		y += 11 + PROMPT_H + 6;
 
 		maxScroll = Math.max(0, y + scroll - contentBottom());
 		if (scroll > maxScroll) {
@@ -132,8 +160,9 @@ public class SettingsScreen extends Screen {
 		});
 	}
 
+	/** Leaves room above Save/Cancel for the "more below" hint. */
 	private int contentBottom() {
-		return height - 32;
+		return height - 42;
 	}
 
 	/** Adds a widget only if it lies fully inside the scrollable area. */
@@ -147,6 +176,8 @@ public class SettingsScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+		// A long system prompt scrolls inside its own box.
+		if (promptBox != null && promptBox.isMouseOver(x, y) && promptBox.mouseScrolled(x, y, scrollX, scrollY)) return true;
 		int next = Math.clamp(scroll - (int) Math.signum(scrollY) * 24, 0, maxScroll);
 		if (next != scroll) {
 			scroll = next;
@@ -156,8 +187,12 @@ public class SettingsScreen extends Screen {
 	}
 
 	private int field(int x, int y, String name, String value, boolean secret, Consumer<String> onChange) {
+		return field(x, y, name, value, secret, FIELD_W, onChange);
+	}
+
+	private int field(int x, int y, String name, String value, boolean secret, int w, Consumer<String> onChange) {
 		label(x, y, name, LABEL);
-		EditBox box = new EditBox(font, x, y + 11, FIELD_W, 18, Component.literal(name));
+		EditBox box = new EditBox(font, x, y + 11, w, 18, Component.literal(name));
 		box.setMaxLength(4000);
 		box.setValue(value);
 		box.setResponder(onChange);
@@ -166,19 +201,25 @@ public class SettingsScreen extends Screen {
 		return y + ROW;
 	}
 
-	/** Asks the local server for its models and fills in the first one. */
-	private void detectModels(String serverName) {
+	/** Asks the server for its models; keeps the current model if it's among them, else picks the first. */
+	private void detectModels() {
 		String url = edit.openaiBaseUrl;
-		detectedModels = "Looking for installed models...";
+		String local = OpenAiCompatibleProvider.localServerName(url);
+		detectedModels = "Looking for models...";
+		installedModels = List.of();
+		rebuildWidgets();
 		Thread t = new Thread(() -> {
 			List<String> models = OpenAiCompatibleProvider.listModels(url, edit.openaiApiKey);
 			minecraft.execute(() -> {
 				if (!url.equals(edit.openaiBaseUrl)) return;
 				if (models.isEmpty()) {
-					detectedModels = serverName + " not reachable or has no models. Is it running?";
+					detectedModels = local != null
+							? local + " not reachable or has no models. Is it running?"
+							: "No models found. Check the URL and API key.";
 				} else {
-					edit.openaiModel = models.getFirst();
-					detectedModels = "Installed: " + String.join(", ", models);
+					if (!models.contains(edit.openaiModel)) edit.openaiModel = models.getFirst();
+					installedModels = models;
+					detectedModels = "";
 				}
 				rebuildWidgets();
 			});
@@ -212,9 +253,11 @@ public class SettingsScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		graphics.centeredText(font, title, width / 2, 10, 0xFFC77DFF);
 		for (Label l : labels) graphics.text(font, l.text(), l.x(), l.y(), l.color(), false);
-		int arrowX = (width + FIELD_W) / 2 + 6;
-		if (scroll > 0) graphics.text(font, "^", arrowX, CONTENT_TOP + 2, 0xFFC77DFF, false);
-		if (scroll < maxScroll) graphics.text(font, "v more", arrowX, contentBottom() - font.lineHeight, 0xFFC77DFF, false);
+		if (scroll > 0) {
+			String up = "^ more";
+			graphics.text(font, up, (width + FIELD_W) / 2 - font.width(up), 10, 0xFFC77DFF, false);
+		}
+		if (scroll < maxScroll) graphics.centeredText(font, Component.literal("v scroll for more v"), width / 2, contentBottom() + 2, 0xFFC77DFF);
 		super.extractRenderState(graphics, mouseX, mouseY, a);
 	}
 }

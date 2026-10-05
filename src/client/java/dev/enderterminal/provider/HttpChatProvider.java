@@ -155,7 +155,7 @@ abstract class HttpChatProvider implements ChatProvider {
 		} catch (Exception e) {
 			if (!cancelled) {
 				error = e.getMessage() == null ? e.toString() : e.getMessage();
-				if (e instanceof java.net.ConnectException) error = "Could not connect. Check the URL in /settings.";
+				if (e instanceof java.net.ConnectException || e instanceof java.net.http.HttpConnectTimeoutException) error = connectError();
 			}
 		} finally {
 			body = null;
@@ -171,6 +171,11 @@ abstract class HttpChatProvider implements ChatProvider {
 			}
 		}
 		listener.onDone(error);
+	}
+
+	/** Shown when the server can't be reached at all. */
+	protected String connectError() {
+		return "Could not connect. Check the URL in /settings.";
 	}
 
 	protected static JsonArray toJson(List<Message> messages) {
