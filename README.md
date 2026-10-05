@@ -13,7 +13,7 @@ The terminal knows where you are, what you're holding, what you're looking at an
   - **Anthropic API key**: pay-per-use key from [console.anthropic.com](https://console.anthropic.com).
   - **OpenAI-compatible**: OpenAI, OpenRouter, Groq, or free local models through [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai). Presets included.
   - The Model field searches the provider's model list as you type.
-- **Game awareness** (opt-in): turn on **Share game info** in settings and each message includes a snapshot of your position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what would be sent.
+- **Game awareness** (opt-in): turn on **Share game info** in settings and each message includes a snapshot of your player name, position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what would be sent.
 - **Client-side only**: works in singleplayer and on servers (the server doesn't need it) and never changes your worlds.
 - **Chat only**: the AI cannot run commands, read files or change anything on your computer.
 

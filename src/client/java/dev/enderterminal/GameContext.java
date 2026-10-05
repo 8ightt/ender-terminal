@@ -44,6 +44,7 @@ public final class GameContext {
 		if (p == null || level == null) return null;
 
 		StringBuilder sb = new StringBuilder("[Game state]\n");
+		sb.append("Player name: ").append(p.getName().getString()).append('\n');
 		BlockPos pos = p.blockPosition();
 		sb.append("Position: x=").append(pos.getX()).append(" y=").append(pos.getY()).append(" z=").append(pos.getZ())
 				.append(", facing ").append(p.getDirection().getName()).append('\n');
