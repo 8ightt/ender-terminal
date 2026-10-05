@@ -213,6 +213,24 @@ abstract class HttpChatProvider implements ChatProvider {
 		return err.toString();
 	}
 
+	/**
+	 * Sends a model-list request and returns the {@code data[].id} values, the shape both OpenAI-style servers and the
+	 * Anthropic API use. Blocks for a few seconds at most; call off the render thread. Empty list on any failure.
+	 */
+	protected static List<String> fetchModelIds(HttpRequest request) {
+		try (HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()) {
+			HttpResponse<String> res = http.send(request, HttpResponse.BodyHandlers.ofString());
+			if (res.statusCode() / 100 != 2) return List.of();
+			List<String> ids = new ArrayList<>();
+			for (JsonElement el : JsonParser.parseString(res.body()).getAsJsonObject().getAsJsonArray("data")) {
+				ids.add(el.getAsJsonObject().get("id").getAsString());
+			}
+			return ids;
+		} catch (Exception e) {
+			return List.of();
+		}
+	}
+
 	protected static String trimSlash(String url) {
 		url = url.strip();
 		while (url.endsWith("/")) url = url.substring(0, url.length() - 1);

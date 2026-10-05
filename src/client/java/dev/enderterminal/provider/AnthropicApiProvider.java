@@ -2,7 +2,9 @@ package dev.enderterminal.provider;
 
 import com.google.gson.JsonObject;
 
+import java.net.URI;
 import java.net.http.HttpRequest;
+import java.time.Duration;
 import java.util.List;
 
 /** Anthropic Messages API with an API key from console.anthropic.com. */
@@ -19,6 +21,16 @@ public final class AnthropicApiProvider extends HttpChatProvider {
 	@Override
 	public String name() {
 		return "Anthropic API (" + model + ")";
+	}
+
+	/** Model ids available to this API key, newest first. Blocks; call off the render thread. Empty on any failure. */
+	public static List<String> listModels(String apiKey) {
+		if (apiKey.isBlank()) return List.of();
+		return fetchModelIds(HttpRequest.newBuilder(URI.create("https://api.anthropic.com/v1/models?limit=1000"))
+				.timeout(Duration.ofSeconds(5))
+				.header("x-api-key", apiKey.strip())
+				.header("anthropic-version", "2023-06-01")
+				.GET().build());
 	}
 
 	@Override
