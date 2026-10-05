@@ -155,7 +155,12 @@ abstract class HttpChatProvider implements ChatProvider {
 		} catch (Exception e) {
 			if (!cancelled) {
 				error = e.getMessage() == null ? e.toString() : e.getMessage();
-				if (e instanceof java.net.ConnectException || e instanceof java.net.http.HttpConnectTimeoutException) error = connectError();
+				if (e instanceof java.net.ConnectException || e instanceof java.net.http.HttpConnectTimeoutException) {
+					error = connectError();
+				} else if (e instanceof java.io.IOException && !(e instanceof java.net.http.HttpTimeoutException)) {
+					// Java reports a closed connection as e.g. "HTTP/1.1 header parser received no bytes".
+					error = droppedError();
+				}
 			}
 		} finally {
 			body = null;
@@ -176,6 +181,11 @@ abstract class HttpChatProvider implements ChatProvider {
 	/** Shown when the server can't be reached at all. */
 	protected String connectError() {
 		return "Could not connect. Check the URL in /settings.";
+	}
+
+	/** Shown when the server closes the connection without finishing its answer. */
+	protected String droppedError() {
+		return "The server closed the connection without answering. Try again.";
 	}
 
 	protected static JsonArray toJson(List<Message> messages) {

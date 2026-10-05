@@ -54,6 +54,15 @@ public final class OpenAiCompatibleProvider extends HttpChatProvider {
 				+ (local.equals("Ollama") ? "Start the Ollama app or run 'ollama serve'." : "Start the server in LM Studio's Developer tab.");
 	}
 
+	/** A local server usually drops the connection when the model doesn't fit in memory and crashes while loading. */
+	@Override
+	protected String droppedError() {
+		String local = localServerName(baseUrl);
+		if (local == null) return super.droppedError();
+		return local + " stopped while answering, usually because the model didn't fit in memory. "
+				+ "Try a smaller model (for example a 3B one) or close other programs.";
+	}
+
 	/** "Ollama" or "LM Studio" for a localhost URL on their default port, else null. */
 	public static String localServerName(String baseUrl) {
 		String host = baseUrl.strip().replaceFirst("^https?://", "");
