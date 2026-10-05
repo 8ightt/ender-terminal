@@ -21,6 +21,8 @@ public final class TerminalSession {
 	public static final int ASSISTANT = 0xFFE6E6E6;
 	public static final int SYSTEM = 0xFF8A8A8A;
 	public static final int ERROR = 0xFFFF6B6B;
+	/** "took 4.2s" under each reply. */
+	public static final int TIMING = 0xFF5F5A70;
 
 	public record Entry(StringBuilder text, int color) {
 	}
@@ -32,6 +34,8 @@ public final class TerminalSession {
 	private @Nullable ChatProvider provider;
 	/** The mod list goes out once per conversation; it doesn't change while playing. */
 	private boolean modsSent;
+	/** When the reply that is on its way was requested, for the live timer. */
+	private volatile long replyStarted;
 	/** Set by /settings so the terminal screen can open the settings screen. */
 	public boolean openSettingsRequested;
 
@@ -174,6 +178,18 @@ public final class TerminalSession {
 		return provider != null && provider.isBusy();
 	}
 
+	/** How long the current reply has been running, in milliseconds; 0 when idle. */
+	public long elapsedMs() {
+		return isBusy() ? System.currentTimeMillis() - replyStarted : 0;
+	}
+
+	/** "0.8s", "42s" or "2m 05s". */
+	public static String formatDuration(long ms) {
+		if (ms < 10_000) return String.format(java.util.Locale.ROOT, "%.1fs", ms / 1000.0);
+		long s = ms / 1000;
+		return s < 60 ? s + "s" : String.format(java.util.Locale.ROOT, "%dm %02ds", s / 60, s % 60);
+	}
+
 	public void cancel() {
 		if (provider != null) provider.cancel();
 	}
@@ -276,6 +292,8 @@ public final class TerminalSession {
 		}
 		add("> " + input, USER);
 		Entry reply = add("", ASSISTANT);
+		long started = System.currentTimeMillis();
+		replyStarted = started;
 		provider.send(prompt, new ChatProvider.Listener() {
 			@Override
 			public void onText(String chunk) {
@@ -284,10 +302,14 @@ public final class TerminalSession {
 
 			@Override
 			public void onDone(String error) {
+				String took = formatDuration(System.currentTimeMillis() - started);
+				boolean answered;
 				synchronized (TerminalSession.this) {
-					if (reply.text().isEmpty()) entries.remove(reply);
+					answered = !reply.text().isEmpty();
+					if (!answered) entries.remove(reply);
 				}
-				if (error != null) add(error, ERROR);
+				if (error != null) add(error + " (after " + took + ")", ERROR);
+				else if (answered) add("took " + took, TIMING);
 				save();
 			}
 		});

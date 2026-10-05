@@ -174,10 +174,17 @@ public class TerminalScreen extends Screen {
 		graphics.blitSprite(RenderPipelines.GUI_TEXTURED, FRAME, 2, TOP - 8, width - 4, height - TOP + 6);
 	}
 
+	/** "thinking..." with a running timer once it takes longer than a second. */
+	private String thinking() {
+		String dots = "thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4));
+		long ms = session.elapsedMs();
+		return ms < 1000 ? dots : dots + " " + ms / 1000 + "s";
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		String status = System.currentTimeMillis() < copiedUntil ? "copied to clipboard"
-				: session.isBusy() ? "thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4)) + "  (Ctrl+C to stop)" : "ready";
+				: session.isBusy() ? thinking() + "  (Ctrl+C to stop)" : "ready";
 		int hx = PAD;
 		graphics.text(font, "Ender Terminal", hx, TOP, 0xFFC77DFF);
 		hx += font.width("Ender Terminal");
@@ -203,12 +210,14 @@ public class TerminalScreen extends Screen {
 			if (text.isEmpty()) {
 				// The reply that is still on its way.
 				entryText.add(null);
-				lines.add(Component.literal("thinking" + ".".repeat((int) (System.currentTimeMillis() / 400 % 4))).getVisualOrderText());
+				lines.add(Component.literal(thinking()).getVisualOrderText());
 				colors.add(TerminalSession.SYSTEM);
 				lineEntry.add(index);
 				continue;
 			}
-			entryText.add(entry.color() == TerminalSession.USER && text.startsWith("> ") ? text.substring(2) : text);
+			// Timing lines aren't worth copying; null makes them unclickable.
+			entryText.add(entry.color() == TerminalSession.TIMING ? null
+					: entry.color() == TerminalSession.USER && text.startsWith("> ") ? text.substring(2) : text);
 			for (String paragraph : text.split("\n", -1)) {
 				List<FormattedCharSequence> wrapped = font.split(Component.literal(paragraph), wrapWidth);
 				if (wrapped.isEmpty()) wrapped = List.of(FormattedCharSequence.EMPTY);
@@ -218,6 +227,15 @@ public class TerminalScreen extends Screen {
 					lineEntry.add(index);
 				}
 			}
+		}
+		// Live timer under a reply that is still being written; becomes "took ..." when it ends.
+		long running = session.elapsedMs();
+		if (running > 0 && !lineEntry.isEmpty() && entryText.get(lineEntry.getLast()) != null
+				&& colors.getLast() == TerminalSession.ASSISTANT) {
+			entryText.add(null);
+			lines.add(Component.literal("writing... " + TerminalSession.formatDuration(running)).getVisualOrderText());
+			colors.add(TerminalSession.TIMING);
+			lineEntry.add(entryText.size() - 1);
 		}
 
 		int visible = outputLines();
