@@ -1,7 +1,5 @@
 # Ender Terminal
 
-![Ender Terminal: ask AI anything, right inside Minecraft](docs/images/banner.png)
-
 A terminal inside Minecraft for chatting with AI. Press <kbd>`</kbd> or click **Ender Terminal** in the pause menu and ask anything: crafting, redstone, mod recipes, or what to do next.
 
 The terminal knows where you are, what you're holding, what you're looking at and which mods you have installed, so answers fit your game.
@@ -16,10 +14,6 @@ The terminal knows where you are, what you're holding, what you're looking at an
 - **Game awareness** (opt-in): turn on **Share game info** in settings and each message includes a snapshot of your player name, position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what would be sent.
 - **Client-side only**: works in singleplayer and on servers (the server doesn't need it) and never changes your worlds.
 - **Chat only**: the AI cannot run commands, read files or change anything on your computer.
-
-| | | |
-| --- | --- | --- |
-| ![Knows your game](docs/images/feature-knows-your-game.png) | ![Use your own AI](docs/images/feature-use-your-own-ai.png) | ![Safe](docs/images/feature-safe.png) |
 
 ## Privacy
 

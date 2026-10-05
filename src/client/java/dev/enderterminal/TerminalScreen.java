@@ -7,9 +7,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import org.jspecify.annotations.Nullable;
 
@@ -21,7 +19,6 @@ public class TerminalScreen extends Screen {
 	/** Header row sits below the top edge so HUD overlays from other mods (minimap coordinates etc.) don't cover it. */
 	private static final int TOP = 18;
 	private static final int INPUT_HEIGHT = 20;
-	private static final Identifier FRAME = Identifier.fromNamespaceAndPath(EnderTerminalClient.MOD_ID, "terminal_frame");
 
 	private final @Nullable Screen parent;
 	private final TerminalSession session = EnderTerminalClient.session();
@@ -171,7 +168,11 @@ public class TerminalScreen extends Screen {
 	@Override
 	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		graphics.fill(0, 0, width, height, 0xC0000000);
-		graphics.blitSprite(RenderPipelines.GUI_TEXTURED, FRAME, 2, TOP - 8, width - 4, height - TOP + 6);
+		// Window frame: purple border around a dark panel, drawn in code (no texture).
+		int x0 = 2, y0 = TOP - 8, x1 = width - 2, y1 = height - 2;
+		graphics.fill(x0, y0, x1, y1, 0xFF9D6BD6);
+		graphics.fill(x0 + 2, y0 + 2, x1 - 2, y1 - 2, 0xFF3A2650);
+		graphics.fill(x0 + 3, y0 + 3, x1 - 3, y1 - 3, 0xF20E0E14);
 	}
 
 	/** "thinking..." with a running timer once it takes longer than a second. */
