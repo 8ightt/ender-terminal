@@ -241,7 +241,7 @@ public class SettingsScreen extends Screen {
 
 	@Override
 	public boolean isPauseScreen() {
-		return false;
+		return true;
 	}
 
 	@Override

@@ -67,9 +67,10 @@ public class TerminalScreen extends Screen {
 		}
 	}
 
+	/** Pauses singleplayer like the game menu; replies keep streaming in the background. Multiplayer can't pause. */
 	@Override
 	public boolean isPauseScreen() {
-		return false;
+		return true;
 	}
 
 	@Override
