@@ -5,6 +5,11 @@
 	"name": "Ender Terminal",
 	"description": "A terminal inside Minecraft for chatting with AI: Claude, OpenAI, OpenRouter, or local models through Ollama and LM Studio.",
 	"authors": ["Ender Terminal contributors"],
+	"contact": {
+		"homepage": "https://github.com/8ightt/ender-terminal",
+		"sources": "https://github.com/8ightt/ender-terminal",
+		"issues": "https://github.com/8ightt/ender-terminal/issues"
+	},
 	"license": "LGPL-3.0-only",
 	"icon": "assets/enderterminal/icon.png",
 	"environment": "client",

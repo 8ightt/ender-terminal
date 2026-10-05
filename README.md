@@ -8,10 +8,11 @@ The terminal knows where you are, what you're holding, what you're looking at an
 
 ## Features
 
-- **Terminal screen** with streaming replies, scrollback, input history, click-to-copy, and a conversation that is remembered between game sessions.
+- **Terminal screen** with streaming replies, scrollback, input history, click-to-copy, and a conversation that is remembered between game sessions. Singleplayer pauses while it is open.
 - **Bring your own AI**
   - **Anthropic API key**: pay-per-use key from [console.anthropic.com](https://console.anthropic.com).
   - **OpenAI-compatible**: OpenAI, OpenRouter, Groq, or free local models through [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai). Presets included.
+  - The Model field searches the provider's model list as you type.
 - **Game awareness** (opt-in): turn on **Share game info** in settings and each message includes a snapshot of your position, dimension, biome, time and weather, health, gear, inventory, the block or mob in view, nearby mobs, and your mod list. Type `/context` to see exactly what would be sent.
 - **Client-side only**: works in singleplayer and on servers (the server doesn't need it) and never changes your worlds.
 - **Chat only**: the AI cannot run commands, read files or change anything on your computer.
