@@ -39,7 +39,7 @@ The terminal knows where you are, what you're holding, what you're looking at an
 
 1. Put `ender-terminal-<version>.jar` and Fabric API in your `mods` folder.
 2. Join a world and press <kbd>`</kbd>, or open the pause menu and click **Ender Terminal**.
-3. Click **Settings**, choose a provider, then log in or paste your API key.
+3. Click **Settings**, choose a provider and paste your API key, or pick the Ollama preset.
 4. Click **Save** and start typing.
 
 ## Controls
