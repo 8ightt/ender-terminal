@@ -65,9 +65,9 @@ public class SettingsScreen extends Screen {
 		switch (edit.provider) {
 			case NONE -> {
 				label(x, y, "Pick a provider above:", LABEL);
-				label(x, y + 12, "Anthropic API - pay-per-use API key from console.anthropic.com.", HINT);
-				label(x, y + 24, "OpenAI-compatible - OpenAI, OpenRouter, Groq, or a local Ollama / LM Studio.", HINT);
-				y += 40;
+				y = wrapped(x, y + 12, "Anthropic API - pay-per-use API key from console.anthropic.com.", HINT);
+				y = wrapped(x, y, "OpenAI-compatible - OpenAI, OpenRouter, Groq, or a local Ollama / LM Studio.", HINT);
+				y += 4;
 			}
 			case ANTHROPIC_API -> {
 				y = field(x, y, "API key (console.anthropic.com > API keys)", edit.anthropicApiKey, true, v -> edit.anthropicApiKey = v);
@@ -132,11 +132,15 @@ public class SettingsScreen extends Screen {
 		y += 36;
 
 		label(x, y, "System prompt (personality and rules)", LABEL);
-		promptBox = MultiLineEditBox.builder().setX(x).setY(y + 11)
-				.build(font, FIELD_W, PROMPT_H, Component.literal("System prompt"));
-		promptBox.setValue(edit.systemPrompt, true);
-		promptBox.setValueListener(v -> edit.systemPrompt = v);
-		add(promptBox);
+		// Shrinks to the space left when scrolled partly into view, rather than vanishing until it fits.
+		int promptH = Math.min(PROMPT_H, contentBottom() - (y + 11));
+		if (promptH >= 20) {
+			promptBox = MultiLineEditBox.builder().setX(x).setY(y + 11)
+					.build(font, FIELD_W, promptH, Component.literal("System prompt"));
+			promptBox.setValue(edit.systemPrompt, true);
+			promptBox.setValueListener(v -> edit.systemPrompt = v);
+			add(promptBox);
+		}
 		y += 11 + PROMPT_H + 6;
 
 		maxScroll = Math.max(0, y + scroll - contentBottom());
@@ -172,6 +176,15 @@ public class SettingsScreen extends Screen {
 
 	private void label(int x, int y, String text, int color) {
 		if (y >= CONTENT_TOP && y + font.lineHeight <= contentBottom()) labels.add(new Label(x, y, text, color));
+	}
+
+	/** Adds a hint wrapped to the field width; returns the y below it. */
+	private int wrapped(int x, int y, String text, int color) {
+		for (var line : font.getSplitter().splitLines(text, FIELD_W, Style.EMPTY)) {
+			label(x, y, line.getString(), color);
+			y += 12;
+		}
+		return y;
 	}
 
 	@Override
