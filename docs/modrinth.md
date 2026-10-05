@@ -11,7 +11,7 @@ Streaming replies, scrollback, input history with <kbd>↑</kbd> <kbd>↓</kbd>,
 Turn on **Share game info** in settings and each message includes a snapshot of your position, biome, time and weather, health, gear with enchantments and durability, inventory, the block or mob you're looking at, nearby mobs and your mod list. Type `/context` to see exactly what would be sent. Off by default.
 
 ### 🔑 Use your own AI
-- **Anthropic API key** (Claude models)
+- **Anthropic API key**
 - **OpenAI-compatible**: OpenAI, OpenRouter, Groq, or **free local models** with Ollama or LM Studio. Presets included.
 
 The Model field searches your provider's models as you type, so you don't need to know exact model names, even among OpenRouter's hundreds.

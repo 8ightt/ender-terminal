@@ -3,7 +3,7 @@
 	"id": "enderterminal",
 	"version": "${version}",
 	"name": "Ender Terminal",
-	"description": "A terminal inside Minecraft for chatting with AI: Claude, OpenAI, OpenRouter, or local models through Ollama and LM Studio.",
+	"description": "A terminal inside Minecraft for chatting with AI: Anthropic API, OpenAI, OpenRouter, or local models through Ollama and LM Studio.",
 	"authors": ["Ender Terminal contributors"],
 	"contact": {
 		"homepage": "https://github.com/8ightt/ender-terminal",
