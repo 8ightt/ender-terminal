@@ -14,7 +14,8 @@
 	"icon": "assets/enderterminal/icon.png",
 	"environment": "client",
 	"entrypoints": {
-		"client": ["dev.enderterminal.EnderTerminalClient"]
+		"client": ["dev.enderterminal.EnderTerminalClient"],
+		"modmenu": ["dev.enderterminal.ModMenuIntegration"]
 	},
 	"depends": {
 		"fabricloader": ">=0.19.5",
